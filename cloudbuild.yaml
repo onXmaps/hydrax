@@ -1,25 +1,17 @@
 steps:
   # build
-  - id: "go build"
-    name: golang:1.23
-    entrypoint: /bin/bash
-    args:
-      - -c
-      - |
-        GO111MODULE=on GOOS=linux GOARCH=amd64 go build -o /workspace/hydra
-
   - id: 'docker build'
     name: 'gcr.io/cloud-builders/docker'
-    waitFor: ['go build']
+    waitFor: ['-']
     env:
     - DOCKER_BUILDKIT=1
     args: [
       'build',
-      '-f', './Dockerfile',
+      '-f', 'Dockerfile',
       '-t', 'gcr.io/onx-daily/hydra-x:$SHORT_SHA',
       '-t', 'gcr.io/onx-staging/hydra-x:$SHORT_SHA',
       '-t', 'gcr.io/onx-production/hydra-x:$SHORT_SHA',
-      '/workspace'
+      '.'
     ]
 
   # push
