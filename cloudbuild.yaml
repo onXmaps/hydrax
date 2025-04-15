@@ -1,0 +1,46 @@
+steps:
+  # build
+  - id: 'docker build'
+    name: 'gcr.io/cloud-builders/docker'
+    waitFor: ['-']
+    env:
+    - DOCKER_BUILDKIT=1
+    args: [
+      'build',
+      '-f', '.docker/Dockerfile-build',
+      '--build-arg=COMMIT=$(COMMIT_SHA)',
+      '--build-arg=BUILD_DATE=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")',
+      '-t', 'gcr.io/onx-daily/hydra-x:$SHORT_SHA',
+      '-t', 'gcr.io/onx-staging/hydra-x:$SHORT_SHA',
+      '-t', 'gcr.io/onx-production/hydra-x:$SHORT_SHA',
+      '.'
+    ]
+
+  # push
+  - id: 'docker push'
+    name: 'gcr.io/cloud-builders/docker'
+    waitFor: ['docker build']
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        if [[ "$BRANCH_NAME" == "daily" ]]; then
+          docker push gcr.io/onx-daily/hydra-x:$SHORT_SHA
+        fi
+
+        if [[ "$BRANCH_NAME" == "staging" ]]; then
+          docker push gcr.io/onx-staging/hydra-x:$SHORT_SHA
+        fi
+
+        if [[ "$BRANCH_NAME" == "production" ]]; then
+          docker push gcr.io/onx-production/hydra-x:$SHORT_SHA
+        fi
+
+        if [[ "$BRANCH_NAME" == "2.3.0" ]]; then
+          docker push gcr.io/onx-daily/hydra-x:$SHORT_SHA
+          docker push gcr.io/onx-staging/hydra-x:$SHORT_SHA
+          docker push gcr.io/onx-production/hydra-x:$SHORT_SHA
+        fi
+
+tags:
+  - hydrax
