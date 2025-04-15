@@ -1,18 +1,16 @@
 FROM alpine:3.20
 
-RUN <<HEREDOC
-    apk add --no-cache --upgrade ca-certificates
+RUN apk add --no-cache --upgrade ca-certificates
 
-    # Add a user/group for nonroot with a stable UID + GID. Values are from nonroot from distroless
-    # for interoperability with other containers.
-    addgroup --system --gid 65532 nonroot
+# Add a user/group for nonroot with a stable UID + GID. Values are from nonroot from distroless
+# for interoperability with other containers.
+RUN addgroup --system --gid 65532 nonroot && \
     adduser --system --uid 65532 \
       --gecos "nonroot User" \
       --home /home/nonroot \
       --ingroup nonroot \
       --shell /sbin/nologin \
       nonroot
-HEREDOC
 
 COPY hydra /usr/bin/hydra
 

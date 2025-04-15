@@ -15,7 +15,7 @@ steps:
     - DOCKER_BUILDKIT=1
     args: [
       'build',
-      '-f', 'Dockerfile',
+      '-f', './Dockerfile',
       '-t', 'gcr.io/onx-daily/hydra-x:$SHORT_SHA',
       '-t', 'gcr.io/onx-staging/hydra-x:$SHORT_SHA',
       '-t', 'gcr.io/onx-production/hydra-x:$SHORT_SHA',
