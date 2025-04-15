@@ -6,7 +6,7 @@ steps:
     args:
       - -c
       - |
-        GO111MODULE=on GOOS=linux GOARCH=amd64 go build
+        GO111MODULE=on GOOS=linux GOARCH=amd64 go build -o /workspace/hydra
 
   - id: 'docker build'
     name: 'gcr.io/cloud-builders/docker'
@@ -19,7 +19,7 @@ steps:
       '-t', 'gcr.io/onx-daily/hydra-x:$SHORT_SHA',
       '-t', 'gcr.io/onx-staging/hydra-x:$SHORT_SHA',
       '-t', 'gcr.io/onx-production/hydra-x:$SHORT_SHA',
-      '.'
+      '/workspace'
     ]
 
   # push
