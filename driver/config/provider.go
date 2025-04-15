@@ -681,8 +681,5 @@ func (p *DefaultProvider) cookieSuffix(ctx context.Context, key string) string {
 
 func (p *DefaultProvider) RefreshTokenRotationGracePeriod(ctx context.Context) time.Duration {
 	gracePeriod := p.getProvider(ctx).DurationF(KeyRefreshTokenRotationGracePeriod, 0)
-	if gracePeriod > time.Minute*5 {
-		return time.Minute * 5
-	}
 	return gracePeriod
 }
