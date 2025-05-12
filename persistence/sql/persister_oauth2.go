@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -386,21 +387,28 @@ func (p *Persister) GetAccessTokenSession(ctx context.Context, signature string,
 	defer otelx.End(span, &err)
 
 	r := OAuth2RequestSQL{Table: sqlTableAccess}
-	conn := p.QueryWithNetwork(ctx)
-	q := conn.Where("signature = ?", x.SignatureHash(signature))
 
-	// Get raw SQL and args before execution
-	sqlStmt, args := q.ToSQL(pop.NewModel(&OAuth2RequestSQL{Table: sqlTableAccess}, ctx))
+	// if env provides, use a follower read
+	if asOfSystemTime := os.Getenv("PG_SELECT_AS_OF_TIMESTAMP"); asOfSystemTime != "" {
+		conn := p.QueryWithNetwork(ctx)
+		q := conn.Where("signature = ?", x.SignatureHash(signature))
 
-	// Modify the SQL: insert AS OF SYSTEM TIME after FROM clause
-	sqlStmt = strings.Replace(
-		sqlStmt,
-		"FROM hydra_oauth2_access",
-		"FROM hydra_oauth2_access AS OF SYSTEM TIME follower_read_timestamp()",
-		1,
-	)
+		// Get raw SQL and args before execution
+		sqlStmt, args := q.ToSQL(pop.NewModel(&OAuth2RequestSQL{Table: sqlTableAccess}, ctx))
 
-	err = q.Connection.RawQuery(sqlStmt, args...).First(&r)
+		// Modify the SQL: insert AS OF SYSTEM TIME after FROM clause
+		sqlStmt = strings.Replace(
+			sqlStmt,
+			"FROM hydra_oauth2_access",
+			fmt.Sprintf("FROM hydra_oauth2_access AS OF SYSTEM TIME %s", asOfSystemTime),
+			1,
+		)
+
+		err = q.Connection.RawQuery(sqlStmt, args...).First(&r)
+	} else {
+		err = p.QueryWithNetwork(ctx).Where("signature = ?", x.SignatureHash(signature)).First(&r)
+	}
+
 	if errors.Is(err, sql.ErrNoRows) {
 		// Backwards compatibility: we previously did not always hash the
 		// signature before inserting. In case there are still very old (but
