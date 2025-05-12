@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gobuffalo/pop/v6"
 	"github.com/gofrs/uuid"
 	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
@@ -385,7 +386,21 @@ func (p *Persister) GetAccessTokenSession(ctx context.Context, signature string,
 	defer otelx.End(span, &err)
 
 	r := OAuth2RequestSQL{Table: sqlTableAccess}
-	err = p.QueryWithNetwork(ctx).Where("signature = ?", x.SignatureHash(signature)).First(&r)
+	conn := p.QueryWithNetwork(ctx)
+	q := conn.Where("signature = ?", x.SignatureHash(signature))
+
+	// Get raw SQL and args before execution
+	sqlStmt, args := q.ToSQL(pop.NewModel(&OAuth2RequestSQL{Table: sqlTableAccess}, ctx))
+
+	// Modify the SQL: insert AS OF SYSTEM TIME after FROM clause
+	sqlStmt = strings.Replace(
+		sqlStmt,
+		"FROM hydra_oauth2_access",
+		"FROM hydra_oauth2_access AS OF SYSTEM TIME follower_read_timestamp()",
+		1,
+	)
+
+	err = q.Connection.RawQuery(sqlStmt, args...).First(&r)
 	if errors.Is(err, sql.ErrNoRows) {
 		// Backwards compatibility: we previously did not always hash the
 		// signature before inserting. In case there are still very old (but
