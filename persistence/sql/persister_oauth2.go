@@ -399,11 +399,10 @@ func (p *Persister) GetAccessTokenSession(ctx context.Context, signature string,
 		// Modify the SQL: insert AS OF SYSTEM TIME after FROM clause
 		sqlStmt = strings.Replace(
 			sqlStmt,
-			"FROM hydra_oauth2_access",
-			fmt.Sprintf("FROM hydra_oauth2_access AS OF SYSTEM TIME %s", asOfSystemTime),
+			"AS hydra_oauth2_access",
+			fmt.Sprintf("AS OF SYSTEM TIME %s", asOfSystemTime),
 			1,
 		)
-
 		err = q.Connection.RawQuery(sqlStmt, args...).First(&r)
 	} else {
 		err = p.QueryWithNetwork(ctx).Where("signature = ?", x.SignatureHash(signature)).First(&r)
